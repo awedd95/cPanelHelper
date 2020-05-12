@@ -5,6 +5,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 import functools
 import time
+import tkinter as tk
 
 class cPanel():
     def init(self):
@@ -18,7 +19,6 @@ class cPanel():
         WebDriverWait(browser, 10)
 
     def login(self):
-#       self.browser.get(cPanelSite)
         configFile = open('config.txt','r')
         config = []
         for line in configFile:
@@ -85,32 +85,84 @@ class cPanel():
     def addDNSRecord(self, site):
         filterBox = browser.find_element_by_id('filterList_input')
         filterBox.send_keys(site)
-        browser.find_elements(By.Css_Selector,"html body#zone_editor.cpanel.yui-skin-sam.cpanel_body div#wrap div#content.container-fluid div.body-content div#viewContent.section div#tableShowHideContainer div#tableContainer.domain-selection-view table#table.table.table-striped.responsive-table tbody tr td.action-buttons button:nth-child(3)").click()
-def main():
-    page = cPanel()
+        browser.find_element_by_css_selector("tbody tr td.action-buttons button:nth-child(5)").click()
+        addRecordButton = browser.find_element_by_id("search_add_record_btn")
+        recordName = browser.find_element_by_id("recordName")
+        recordType = Select(browser.find_element_by_id("recordType"))
+        recordValue = browser.find_element_by_class("record_subelement subelement_input")
+        addRecordButton.click()
+        recordName.send_keys("test")
+        recordValue.send_keys("test")
+        recordType.select_by_value("AAAA")
+        
+'''
+ Record types:
+ A = 1
+ AAAA = 28
+ MX = 15
+ CNAME = 5
+ TXT = 16
+
+ Information field:
+ TXT = Text
+ A = IP4Address
+ MX = NameExchange
+''' 
+
+    def recordType(self):
+        if type = "1":
+            return "A"
+        if type = "28":
+            return "AAAA"
+        if type = "15":
+            return "MX"
+        if type = "5":
+            return "CNAME"
+        if type = "16":
+            return "TXT"
+
+class Gui(tk.Frame):
     sites = []
     file = open("addresses.txt", "r")
     for line in file:
         sites.append(line)
-    print('Please choose an option:')
-    print('1 - Add addon domains to cPanel')
-    print('2 - Add DNS records')
-    option = input("Type the number for the option:")
-    if(option == '1'):
-        page.init()
-        page.login()
-        page.goToAddDomains()
-        for site in sites:
-            page.addDomain(site)
+    page = cPanel()
+
+    def __init__(self, master=None):
+        super().__init__(master)
+        self.master = master
+        self.pack()
+        self.create_widgets()
+
+    def startBrowser(self):
+        self.page.init()
+        self.page.login()
+
+    def addDomainsGui(self):
+        self.startBrowser()
+        self.page.goToAddDomains()
+        for site in self.sites: 
+            self.page.addDomain(site)
             time.sleep(1)
-            page.goBack()
-        print("done: Added " + str(len(sites)) + " addon domains.")
-    
-    if(option == '2'):
-        page.init()
-        page.login()
-        page.goToDNS()
-        page.addDNSRecord("akin.asia")
+            self.page.goBack()
+
+    def addDNSGui(self):
+        self.startBrowser()
+        self.page.goToDNS() 
+        #for site in self.sites: 
+        self.page.addDNSRecord("akin.asia")
+
+    def create_widgets(self):
+        self.addDomains = tk.Button(self, text="Add Addon Domains", command=self.addDomainsGui)
+        self.addDomains.pack(side="top")
+        
+        self.addRecords = tk.Button(self, text="Add DNS Records", command=self.addDNSGui)
+        self.addRecords.pack(side="top")
+
+        self.quit = tk.Button(self, text="QUIT", fg="red",command=self.master.destroy)
+        self.quit.pack(side="bottom")
 
 if __name__ == "__main__":
-    main()
+    root = tk.Tk()
+    app = Gui(master=root)
+    app.mainloop()
