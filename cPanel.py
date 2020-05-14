@@ -6,8 +6,13 @@ from selenium.webdriver.common.by import By
 import functools
 import time
 import tkinter as tk
+import json
 
 class cPanel():
+    
+    with open("usable.json") as json_file:
+        data = json.load(json_file)
+
     def init(self):
         global browser
         browser = Firefox()
@@ -81,46 +86,64 @@ class cPanel():
     def goToDNS(self):
         myElem = WebDriverWait(browser, 10).until(EC.presence_of_element_located((By.ID, 'icon-addon_domains')))
         browser.find_element_by_id("icon-zone_editor").click()
-
-    def addDNSRecord(self, site):
-        filterBox = browser.find_element_by_id('filterList_input')
-        filterBox.send_keys(site)
-        browser.find_element_by_css_selector("tbody tr td.action-buttons button:nth-child(5)").click()
-        addRecordButton = browser.find_element_by_id("search_add_record_btn")
-        recordName = browser.find_element_by_id("recordName")
-        recordType = Select(browser.find_element_by_id("recordType"))
-        recordValue = browser.find_element_by_class("record_subelement subelement_input")
-        addRecordButton.click()
-        recordName.send_keys("test")
-        recordValue.send_keys("test")
-        recordType.select_by_value("AAAA")
-        
-'''
- Record types:
- A = 1
- AAAA = 28
- MX = 15
- CNAME = 5
- TXT = 16
-
- Information field:
- TXT = Text
- A = IP4Address
- MX = NameExchange
-''' 
+ 
+    def printRecords(self, item):
+            data = {
+                    'IPAddress' : '',
+                    'Exchange' : '',
+                    'Priority' : 0,
+                    'text' : '',
+                    'domain' : ''
+            }
+            for record in item["records"]:
+                recordType = list(record.keys())[0]
+                if recordType == '1':
+                    data['IPAddress'] = item["records"][item["records"].index(record)][recordType]
+                if recordType == '15':
+                    data['Exchange'] = item["records"][item["records"].index(record)][recordType][0]['Exchange']
+                    data['Priority'] = item["records"][item["records"].index(record)][recordType][1]['Priority']
+                if recordType == '16':
+                    data['text'] = item["records"][item["records"].index(record)][recordType]
+            data['domain'] = item["domain"]
+            return(data)
 
     def recordType(self):
-        if type = "1":
+        if type == "1":
             return "A"
-        if type = "28":
+        if type == "28":
             return "AAAA"
-        if type = "15":
+        if type == "15":
             return "MX"
-        if type = "5":
+        if type == "5":
             return "CNAME"
-        if type = "16":
+        if type == "16":
             return "TXT"
 
+
+    def addDNSRecord(self):
+        self.wait()
+        filterBox = WebDriverWait(browser, 10).until(EC.presence_of_element_located((By.ID,'filterList_input')))
+        filterBox = browser.find_element_by_id("filterList_input")
+        for item in self.data:
+            data = self.printRecords(item)
+            filterBox.send_keys(data['domain'])
+            print(filterBox.get_attribute('value')
+#           if data['domain'] in filterBox.text:
+#               manage = browser.find_element_by_css_selector("tbody tr td.action-buttons button:nth-child(5)")
+#               manage.click()
+            self.wait()
+            addRecordButton = browser.find_element_by_id("search_add_record_btn")
+            recordName = browser.find_element_by_id("recordName")
+            recordType = browser.find_element_by_id("recordType")
+#           recordValue = browser.find_element_by_class("record_subelement subelement_input")
+            self.wait()
+#           addRecordButton.click()
+#           recordName.send_keys("test")
+#           recordValue.send_keys("test")
+#           recordType.select_by_value("AAAA")
+
+        
+    
 class Gui(tk.Frame):
     sites = []
     file = open("addresses.txt", "r")
@@ -150,7 +173,9 @@ class Gui(tk.Frame):
         self.startBrowser()
         self.page.goToDNS() 
         #for site in self.sites: 
-        self.page.addDNSRecord("akin.asia")
+        self.page.addDNSRecord()
+    def testRecords(self):
+        self.page.printRecords()
 
     def create_widgets(self):
         self.addDomains = tk.Button(self, text="Add Addon Domains", command=self.addDomainsGui)
@@ -158,6 +183,9 @@ class Gui(tk.Frame):
         
         self.addRecords = tk.Button(self, text="Add DNS Records", command=self.addDNSGui)
         self.addRecords.pack(side="top")
+        
+        self.testRecords = tk.Button(self, text="Test DNS Records", command=self.testRecords)
+        self.testRecords.pack(side="top")
 
         self.quit = tk.Button(self, text="QUIT", fg="red",command=self.master.destroy)
         self.quit.pack(side="bottom")
